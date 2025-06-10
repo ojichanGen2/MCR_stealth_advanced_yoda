@@ -1,0 +1,86 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="UTF-8">
+  <title>MCRLoger</title>
+  <style>
+    table, th, td {
+      border: 1px solid black;
+      border-collapse: collapse;
+      font-family: monospace;
+    }
+    th, td {
+      padding: 4px;
+    }
+  </style>
+</head>
+<body>
+  <h2>MCRLoger</h2>
+  <input type="file" id="fileInput"><br><br>
+  <table id="logTable"></table>
+
+  <script>
+    const columnNames = [
+      "LL", "CC", "RR", // ← d_0 を展開
+      "エンコーダ",   // d_1
+      "pattern",     // d_2
+      "コース角度",   // d_3
+      "サーボ角度",   // d_4
+      "指定角度",     // d_5
+      "アナログR",   // d_6
+      "アナログL",   // d_7
+      "アナログC",   // d_8
+      "PWMステア",   // d_9
+      "PWM FR",     // d_10
+      "PWM FL",     // d_11
+      "PWM RR",     // d_12
+      "PWM RL",     // d_13
+      "未使用1",     // d_14
+      "未使用2"      // d_15
+    ];
+  
+    document.getElementById('fileInput').addEventListener('change', function (e) {
+      const file = e.target.files[0];
+      const reader = new FileReader();
+  
+      reader.onload = function (event) {
+        const lines = event.target.result.split('\n');
+        const table = document.getElementById('logTable');
+        table.innerHTML = '';
+  
+        // ヘッダー行
+        const headerRow = document.createElement('tr');
+        headerRow.innerHTML = '<th>No</th>' + columnNames.map(name => `<th>${name}</th>`).join('');
+        table.appendChild(headerRow);
+  
+        let lineNo = 0;
+        lines.forEach(line => {
+          if (line.includes('fin')) {
+            const rawValues = [];
+            for (let i = 0; i < 16; i++) {
+              const match = line.match(new RegExp(`d_${i}=\\s*(-?\\d+)`));
+              rawValues.push(match ? parseInt(match[1], 10) : '');
+            }
+  
+            if (rawValues.length === 16) {
+              const d0 = rawValues[0];
+              const LL = ((d0 >> 2) & 1) ? '●' : '◯';
+              const CC = ((d0 >> 1) & 1) ? '●' : '◯';
+              const RR = ((d0 >> 0) & 1) ? '●' : '◯';
+  
+              const displayValues = [LL, CC, RR, ...rawValues.slice(1)];
+  
+              const row = document.createElement('tr');
+              row.innerHTML = `<td>${lineNo++}</td>` + displayValues.map(v => `<td>${v}</td>`).join('');
+              table.appendChild(row);
+            }
+          }
+        });
+      };
+  
+      reader.readAsText(file);
+    });
+  </script>
+  
+</body>
+</html>
