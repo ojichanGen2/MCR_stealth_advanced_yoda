@@ -244,7 +244,20 @@ volatile char PD_trig = 0;
 /*
  *	LCD関連
  */
-int lcd_pattern = 1;
+volatile uint8_t lcd_pattern = 1;
+
+const int16_t speed_pulse[90] = {
+    0, 4, 8, 12, 16, 21, 25, 29, 33, 37, 41,
+    45, 49, 53, 57, 62, 66, 70, 74, 78, 82,
+    86, 90, 94, 98, 103, 107, 111, 115, 119,
+    123, 127, 131, 135, 139, 144, 148, 152,
+    156, 160, 164, 168, 172, 176, 180, 185,
+    189, 193, 197, 201, 205, 209, 213, 217,
+    221, 226, 230, 234, 238, 242, 246, 250,
+    254, 258, 262, 267, 271, 275, 279, 283,
+    287, 291, 295, 299, 303, 308, 312, 316,
+    320, 324, 328, 332, 336, 340, 344, 349,
+    353, 357, 361, 365};
 
 /************************************************************************/
 /**
@@ -638,7 +651,7 @@ void loop()
                 // iAngle0 = VR_CENTER; // センター値固定
                 CPU_LED_2 = OFF;
                 cnt1 = 0;
-                saveIndex = 0;
+                // saveIndex = 0;
                 // saveFlag = true; //pattern :5 で行う　/* データ保存開始               */
                 check_sen_cnt = 0;
                 check_enc_cnt = 0;
@@ -680,7 +693,7 @@ void loop()
                 // iAngle0 = VR_CENTER; // センター値固定
                 CPU_LED_2 = OFF;
                 cnt1 = 0;
-                saveIndex = 0;
+                // saveIndex = 0;
                 // saveFlag = true; //pattern :5 で行う　/* データ保存開始               */
                 check_sen_cnt = 0;
                 check_enc_cnt = 0;
@@ -750,7 +763,7 @@ void loop()
                 // iAngle0 = getServoAngle(); /* 0度の位置記憶 */
                 pattern = 11;
                 cnt1 = 0;
-                saveIndex = 0;
+                // saveIndex = 0;
                 saveFlag = true; /* データ保存開始               */
                 check_sen_cnt = 0;
                 check_enc_cnt = 0;
@@ -1931,7 +1944,7 @@ void loop()
             motor_r(0, 0);
             // setBeepPatternS(0xc000);
             saveFlag = 0;
-            saveSendIndex = 0;
+            // saveSendIndex = 0;
             pattern = 243;
             cnt1 = 0;
             break;
@@ -2454,7 +2467,7 @@ void servoPwmOut(int pwm)
 /************************************************************************/
 void Diff_Nomalization(void)
 {
-    int digiSensUR_buf = (())
+    // int digiSensUR_buf = (())
 }
 
 /************************************************************************/
