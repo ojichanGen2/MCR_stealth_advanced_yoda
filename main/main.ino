@@ -34,6 +34,8 @@ void timerCallback(timer_callback_args_t __attribute((unused)) * p_args);
 void initSens(void);
 void initMotor(void);
 
+void Diff_Nomalization(void);
+
 unsigned char dipsw_get(void);
 unsigned char pushsw_get(void);
 void motor_r(int accele_l, int accele_r);
@@ -146,6 +148,24 @@ volatile uint8_t digiSensCC;
 volatile uint8_t digiSensCL;
 volatile uint8_t digiSensLL;
 volatile uint8_t digiSensUL;
+
+volatile uint16_t sensorMax; // センサの最大値
+volatile uint16_t sensorMin; // センサの最小値
+
+volatile uint16_t sensorMaxRR; // RRの最大値
+volatile uint16_t sensorMinRR; // RRの最小値
+
+volatile uint16_t sensorMaxLL; // LLの最大値
+volatile uint16_t sensorMinLL; // LLの最小値
+
+volatile uint16_t sensorMaxUR; // URの最大値
+volatile uint16_t sensorMinUR; // URの最小値
+
+volatile uint16_t sensorMaxUL; // ULの最小値
+volatile uint16_t sensorMinUL; // ULの最小値
+
+float pbuf[7][3];
+float p[7];
 
 /*
  *	R8Cプログラムから引用
@@ -487,25 +507,28 @@ void loop()
                 // iAngle0 = getServoAngle(); // 0度の位置記憶
                 pattern = 2; // ゲートセンサ無し （手押し）
                 // pattern = 3; // ゲートセンサ有り
+
+                sensorMax = anaSensCC_diff; // センサの最大値
+                sensorMin = anaSensCC_diff; // センサの最小値
+
+                sensorMaxRR = anaSensRR_diff; // RRの最大値
+                sensorMinRR = anaSensRR_diff; // RRの最小値
+
+                sensorMaxLL = anaSensLL_diff; // LLの最大値
+                sensorMinLL = anaSensLL_diff; // LLの最小値
+
+                sensorMaxUR = anaSensUR_diff; // URの最大値
+                sensorMinUR = anaSensUR_diff; // URの最小値
+
+                sensorMaxUL = anaSensUL_diff; // ULの最小値
+                sensorMinUL = anaSensUL_diff; // ULの最小値
+
                 break;
             }
             break;
 
         // キャリブレーション
         case 2:
-            static int sensorMax = anaSensCC_diff; // センサの最大値
-            static int sensorMin = anaSensCC_diff; // センサの最小値
-
-            static int sensorMaxRR = anaSensRR_diff; // RRの最大値
-            static int sensorMinRR = anaSensRR_diff; // RRの最小値
-            static int sensorMaxLL = anaSensLL_diff; // LLの最大値
-            static int sensorMinLL = anaSensLL_diff; // LLの最小値
-
-            static int sensorMaxUR = anaSensUR_diff; // URの最大値
-            static int sensorMinUR = anaSensUR_diff; // URの最小値
-            static int sensorMaxUL = anaSensUL_diff; // ULの最小値
-            static int sensorMinUL = anaSensUL_diff; // ULの最小値
-
             static int angle = 0;      // 現在のサーボ角度
             static int Max_angle = 65; // 最大のサーボ角度
             static int step = 1;       // サーボの移動
@@ -779,14 +802,7 @@ void loop()
             /* 通常トレース */
             servoPwmOut(iServoPwm); // ライントレース制御
             i = getServoAngle();    // ステアリング角度取得
-                                    // 走行終了処理(角度)
-                                    // if (abs(i) > 55) {
-                                    //   if (cnt1 > 3000) {
-                                    //     stop_D = 1;
-                                    //   }
-                                    // } else {
-                                    //   cnt1 = 0;
-                                    // }
+            iSetAngle = 0;
 
             if (Angle_D > 0)
             {
@@ -1459,7 +1475,7 @@ void loop()
                 motor_f(85, 0);           // 前 （左,右）
                 motor_r(85, 0);           // 後（左,右)
 
-                if (sensRRon == ON)
+                if (digiSensCL == ON)
                 {
                     cnt1 = 0;
                     pattern = 162; /*左デジタルセンサ反応時次の処理へ */
@@ -1472,7 +1488,7 @@ void loop()
                 motor_f(0, 85);            // 前 （左,右）
                 motor_r(0, 85);            // 後（左,右)
 
-                if (sensLLon == ON)
+                if (digiSensCR == ON)
                 {
                     cnt1 = 0;
                     pattern = 162; /*左デジタルセンサ反応時次の処理へ */
@@ -1511,7 +1527,7 @@ void loop()
                 motor_f(85, 0);           // 前 （左,右）
                 motor_r(85, 0);           // 後（左,右)
 
-                if (digiSensRR == OFF)
+                if (digiSensRR == ON)
                 {
                     pattern = 166; /*左デジタルセンサOFF反応時次の処理へ */
                     cnt1 = 0;
@@ -1525,7 +1541,7 @@ void loop()
                 motor_f(0, 85);            // 前 （左,右）
                 motor_r(0, 85);            // 後（左,右)
 
-                if (digiSensLL == OFF)
+                if (digiSensLL == ON)
                 {
                     pattern = 166; /*左デジタルセンサOFF反応時次の処理へ */
                     cnt1 = 0;
@@ -1536,7 +1552,7 @@ void loop()
         case 166: // 最内センサ　黒反応後の処理（大カウンター）　最内センサ　白反応時待ち
             if (laneDirection == 'L')
             { // レーン方向　左
-                // iSetAngle = -LANE_ANGLE_L; /* +で左 -で右に曲がります */ // カウンターなので逆に振る　
+                iSetAngle = -LANE_ANGLE_L; /* +で左 -で右に曲がります */ // カウンターなので逆に振る　
                 servoPwmOut(iServoPwm2); // 2角度制御 3:割込制御無
                 motor_f(90, 80);         // 前 （左,右）
                 motor_r(90, 0);          // 後（左,右)
@@ -1551,7 +1567,7 @@ void loop()
             }
             else if (laneDirection == 'R')
             { // レーン方向　右　カウンター処理
-                // iSetAngle = LANE_ANGLE_R; /* +で左 -で右に曲がります */ // カウンターなので逆に振る　
+                iSetAngle = LANE_ANGLE_R; /* +で左 -で右に曲がります */ // カウンターなので逆に振る　
                 servoPwmOut(iServoPwm2); // 2角度制御 3:割込制御無
                 motor_f(80, 90);         // 前 （左,右）
                 motor_r(0, 90);          // 後（左,右)
@@ -2069,6 +2085,7 @@ void timerCallback(timer_callback_args_t __attribute((unused)) * p_args)
         /* サーボモータ制御(PD計算) */
         servoControl();
         servoControl2();
+        Diff_Nomalization();
         break;
     case 3:
         // @TODO センサ値取得
@@ -2467,7 +2484,42 @@ void servoPwmOut(int pwm)
 /************************************************************************/
 void Diff_Nomalization(void)
 {
-    // int digiSensUR_buf = (())
+    int i;
+    const float PH_FILTER = 5.0f; // ローパスフィルタゲイン
+    const float DT = 0.001f;      // 制御周期（例：10ms = 0.01s）
+
+    // センサー差分配列
+    uint16_t sensDiff[7] = {
+        anaSensUL_diff, anaSensLL_diff, anaSensCL_diff,
+        anaSensCC_diff, anaSensCR_diff, anaSensRR_diff, anaSensUR_diff};
+
+    // 最小・最大値（キャリブレーション結果）配列
+    int sensMin[7] = {
+        sensorMinUL, sensorMinLL, sensorMin,
+        sensorMin, sensorMin, sensorMinRR, sensorMinUR};
+
+    int sensMax[7] = {
+        sensorMaxUL, sensorMaxLL, sensorMax,
+        sensorMax, sensorMax, sensorMaxRR, sensorMaxUR};
+
+    for (i = 0; i < 7; i++)
+    {
+        // 差分の正規化
+        float norm = (float)(sensDiff[i] - sensMin[i]) / (float)(sensMax[i] - sensMin[i]);
+        if (norm < 0.0f)
+            norm = 0.0f;
+        // if (norm > 1.0f) norm = 1.0f;
+
+        // 中央値フィルタ用バッファに格納
+        // pbuf[i][cnt] = norm;
+
+        // 中央値フィルタ + ローパスフィルタ
+        p[i] += (-p[i] * PH_FILTER * DT + norm * PH_FILTER * DT);
+    }
+
+    // cnt++;
+    // if (cnt >= 3)
+    //     cnt = 0; // pbuf のリングバッファ用
 }
 
 /************************************************************************/
@@ -3523,6 +3575,7 @@ void LOG_rec(void)
     saveDataA[12][logCt] = motor_buff_Rr;   //: PWM後右;
     saveDataA[13][logCt] = motor_buff_Rl;   //: PWM後左;
     saveDataA[14][logCt] = logCt;
+    saveDataA[15][logRd] = p[3]*1000;
 
     logCt++;
     // }
