@@ -34,7 +34,7 @@ void timerCallback(timer_callback_args_t __attribute((unused)) * p_args);
 void initSens(void);
 void initMotor(void);
 
-void Diff_Nomalization(void);
+void Diff_Nomal(void);
 
 unsigned char dipsw_get(void);
 unsigned char pushsw_get(void);
@@ -620,19 +620,19 @@ void loop()
             { // 片方向2回ずつ振る計4回
                 // 閾値計算
                 int threshold = (sensorMax - sensorMin) * Judg_percent;                                             // CC閾値
-                int thresholdRL = (((sensorMaxRR - sensorMinRR) + (sensorMaxLL - sensorMinLL)) / 2) * Judg_percent; // RR,LL閾値
-                // int thresholdRR = (sensorMaxRR - sensorMinRR) * Judg_percent;                                      // RR閾値
-                // int thresholdLL = (sensorMaxLL - sensorMinLL) * Judg_percent;                                      // LL閾値
+                // int thresholdRL = (((sensorMaxRR - sensorMinRR) + (sensorMaxLL - sensorMinLL)) / 2) * Judg_percent; // RR,LL閾値
+                int thresholdRR = (sensorMaxRR - sensorMinRR) * Judg_percent;                                      // RR閾値
+                int thresholdLL = (sensorMaxLL - sensorMinLL) * Judg_percent;                                      // LL閾値
                 int thresholdU = (((sensorMaxUR - sensorMinUR) + (sensorMaxUL - sensorMinUL)) / 2) * Judg_percent; // UR,UL閾値
                 // int thresholdUL = (sensorMaxUL - sensorMinUL) * Judg_percent; // UL閾値
                 int threshold_BK = (sensorMax - sensorMin) * Judg_BK_percent; // UR,UL閾値
 
                 thrSensUR = thresholdU;
-                thrSensRR = thresholdRL;
+                thrSensRR = thresholdRR;
                 thrSensCR = threshold;
                 thrSensCC = threshold;
                 thrSensCL = threshold;
-                thrSensLL = thresholdRL;
+                thrSensLL = thresholdLL;
                 thrSensUL = thresholdU;
                 thrSensBK = threshold_BK;
 
@@ -2085,7 +2085,7 @@ void timerCallback(timer_callback_args_t __attribute((unused)) * p_args)
         /* サーボモータ制御(PD計算) */
         servoControl();
         servoControl2();
-        Diff_Nomalization();
+        Diff_Nomal();
         break;
     case 3:
         // @TODO センサ値取得
@@ -2482,11 +2482,11 @@ void servoPwmOut(int pwm)
 /* 引数　 なし                                                          */
 /* 戻り値 なし                                                          */
 /************************************************************************/
-void Diff_Nomalization(void)
+void Diff_Nomal(void)
 {
     int i;
-    const float PH_FILTER = 5.0f; // ローパスフィルタゲイン
-    const float DT = 0.001f;      // 制御周期（例：10ms = 0.01s）
+    const float PH_FILTER = 2.0f; // ローパスフィルタゲイン 5
+    const float DT = 0.01f;      // 制御周期（例：10ms = 0.01s）
 
     // センサー差分配列
     uint16_t sensDiff[7] = {
@@ -2506,15 +2506,15 @@ void Diff_Nomalization(void)
     {
         // 差分の正規化
         float norm = (float)(sensDiff[i] - sensMin[i]) / (float)(sensMax[i] - sensMin[i]);
-        if (norm < 0.0f)
-            norm = 0.0f;
+        // if (norm < 0.0f)
+        //     norm = 0.0f;
         // if (norm > 1.0f) norm = 1.0f;
 
         // 中央値フィルタ用バッファに格納
         // pbuf[i][cnt] = norm;
 
         // 中央値フィルタ + ローパスフィルタ
-        p[i] += (-p[i] * PH_FILTER * DT + norm * PH_FILTER * DT);
+        p[i] += (-p[i] * PH_FILTER /*  * DT*/ + norm * PH_FILTER * DT);
     }
 
     // cnt++;
@@ -3563,7 +3563,7 @@ void LOG_rec(void)
     saveDataA[0][logCt] = digiSensLL << 2 | digiSensCC << 1 | digiSensRR;
     saveDataA[1][logCt] = iEncoder;
     saveDataA[2][logCt] = pattern;
-    saveDataA[3][logCt] = cource;
+    saveDataA[3][logCt] = (p[3] * 1000);
     saveDataA[4][logCt] = getServoAngle();
     saveDataA[5][logCt] = iSetAngle;
     saveDataA[6][logCt] = anaSensCR_diff;
@@ -3575,7 +3575,7 @@ void LOG_rec(void)
     saveDataA[12][logCt] = motor_buff_Rr;   //: PWM後右;
     saveDataA[13][logCt] = motor_buff_Rl;   //: PWM後左;
     saveDataA[14][logCt] = logCt;
-    saveDataA[15][logRd] = p[3]*1000;
+    // saveDataA[15][logCt] = ;
 
     logCt++;
     // }
